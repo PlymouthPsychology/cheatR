@@ -1,0 +1,811 @@
+---
+title:
+  "Everything you needed to know to help your project students
+  but were too busy to find out."
+author: Ben Whalley
+output:
+  webex::html_clean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+> Several staff have commented that the UG teaching materials can be time consuming to use as a reference when supporting project students.
+>
+> This page is intended as a quick reference when helping students with their data handling and analysis.
+>
+> Included on this page are short examples of everything we teach students in stage 1 to 4, including the project option workshops, plus some extensions/additions which you may find useful to introduce project students to. Extensions (i.e. parts not taught in the programme) are clearly marked.
+
+- TODO add markers for extension content
+- TODO add more links because to stage 1 and 2 materials
+
+# Before you start
+
+Most of the code here requires loading the tidyverse. If your student has a `could not find function x` error it's almost certainly that.
+
+```{r, eval=F}
+read_csv('x')
+```
+
+This would produce the error: `Error: 'x' does not exist in current working directory ('/Users/ben/dev/discourse/r-guides').` You need to load tidyverse first:
+
+```{r}
+library(tidyverse)
+```
+
+When reviewing student scripts ensure:
+
+- They load `tidyverse` (and BayesFactor) at the top of the file
+- They **don't** load it again further down
+- They are including sufficient vertical white space to make the file readable
+- They break up long lines of code (e.g. > 100 characters, and after every pipe `%>%`) with a line break
+
+## Using projects or Rmd files
+
+Using [a project](https://ajwills72.github.io/rminr/using-projects.html) or working in an Rmd (Rmarkdown) file will greatly reduce errors caused by missing files/incorrect paths.
+
+- TODO add link to Rmd guide
+
+# Reading data
+
+## Read CSV
+
+Read a CSV files stored in the current working directory:
+
+```{r, eval=F}
+mydata <- read_csv('filename.sav')
+```
+
+## Download a file from the internet
+
+This downloads supplementary data from a paper in PlosOne (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0212482#sec016)
+
+```{r}
+download.file('https://ndownloader.figstatic.com/files/14532419', 'egger.sav')
+```
+
+### Read from SPSS
+
+```{r}
+egger <- haven::read_sav('egger.sav')
+
+egger %>%
+  select(ID:height_cm) %>%
+  glimpse
+```
+
+If reading an existing SPSS file which has factor (category) labels, you may want to run this command which
+properly converts all labelled category data to factors. This avoids some errors when pivoting or mutating:
+
+```{r}
+egger.as.factors <- egger %>%
+  mutate_if(haven::is.labelled, factor)
+
+egger.as.factors %>%
+  select(ID:height_cm) %>%
+  glimpse
+```
+
+Visually there is not much difference, but the variables of type `<dbl+lbl>` (haven's labelled data type) are now `<fct>` (boring old R factors).
+
+If you have any other trouble with SPSS files, read the Haven documentation. There are some weirdnesses with older SPSS/Sav file formats.
+
+### Fix file path errors
+
+```{r, eval=F}
+read_csv('doesntexist.csv')
+```
+
+If the file you want to read in can't be found, check the current working directory (also displayed in the error message), or list the files in the directory to check what is actually there
+
+```{r}
+getwd()
+```
+
+```{r}
+list.files()
+```
+
+# Renaming columns {#renaming}
+
+Use `rename` for simple cases
+
+```{r}
+mtcars %>%
+  select(cyl, mpg) %>%
+  rename(MPG = mpg, Cylinders = cyl) %>%
+  head()
+```
+
+Use back-ticks to wrap the new name if you want to include spaces:
+
+```{r}
+mtcars %>%
+  select(mpg) %>%
+  rename(`Miles per gallon` = mpg) %>%
+  head()
+```
+
+### Tidying up messy names
+
+The janitor package has a really great function to tidy messy names as they come from online survey systems. This is a real example:
+
+```{r}
+dpt_survey <- read_csv('Devon Partnership Trust DPT Patient and Carers Survey Experiences of D.csv') %>%
+  # just show first 20 cols
+  select(1:20) %>%
+  glimpse()
+```
+
+```{r}
+dpt_survey %>%
+  janitor::clean_names() %>%
+  select(1:20) %>%
+  glimpse
+```
+
+This makes working with the dataset much easier:
+
+- Everything is lower case, so no guessing whether you need to capitalise names
+- No spaces (so no escaping of spaces needed with back ticks)
+- No special characters which can mess things up
+
+### Renaming programatically
+
+You can do similar things yourself by doing string replcements and the `set_names` function.
+
+```{r}
+# here the dot refers to the data coming from the pipe
+dpt_survey %>% names(.)
+```
+
+So this can be more flexible, but does still need some more work to remove special characters like parentheses:
+
+```{r}
+dpt_survey %>%
+  set_names(tolower(str_replace_all(names(.), " ", "_"))) %>%
+  select(1:20) %>%
+  glimpse
+```
+
+# Tables/descriptive statistics
+
+In stage 1 and 2 students learn how to use `group_by` and `summarise` to make tables of descriptive statistics:
+
+```{r}
+mtcars %>%
+  group_by(cyl) %>%
+  summarise(MPG = mean(mpg), SD=sd(mpg))
+```
+
+### Summarising multiple variables
+
+It's also possible to use `pivot_longer` to simplify summarising multiple variables.
+We don't show this technique explicitly, but we do teach `pivot_longer` and `pivot_wider` so
+if the technique was useful then it would be worth teaching:
+
+```{r}
+mtcars %>%
+  select(cyl, mpg, wt, disp, drat) %>%
+  pivot_longer(-cyl) %>%
+  group_by(name) %>%
+  summarise(M=mean(value), SD=sd(value), Med = median(value), IQR = IQR(value))
+```
+
+### Comparing variables
+
+See [reshaping data](#reshaping) below for a guide to `pivot_longer` and `pivot_wider`.
+
+Using `pivot_longer` and `pivot_wider` you can compare variables in a table:
+
+```{r}
+mtcars %>%
+  select(cyl, am, mpg, wt) %>%
+  # note here we have to select multiple columns to exclude (cyl and am) by adding a hyhen in front of the name
+  pivot_longer(c(-cyl, -am)) %>%
+  # recode am to have nice labels in the table below
+  mutate(am=factor(am, levels=c(0,1), labels=c("Manual", "Auto"))) %>%
+  group_by(am, name) %>%
+  summarise(M=mean(value), SD=sd(value)) %>%
+  pivot_wider(names_from=am, values_from=c(M, SD)) %>%
+  # replace underscores in column names with spaces
+  set_names(str_replace(names(.), "_", " "))
+```
+
+See also various techniques for [renaming columns](#renaming)
+
+# Reshaping data {#reshaping}
+
+We cover reshaping in the [Within-subject differences](https://ajwills72.github.io/rminr/anova1.html), but only in passing.
+We also covert this in the MSc workshops (url TBC).
+
+There are two functions to reshape data:
+
+- `pivot_longer`
+- `pivot_wider`
+
+## Reshape to long form
+
+It's best to select only the data you need before reshaping; although not strictly necessary, it does avoid some common errors:
+
+#### Simplest case: make everything long
+
+```{r}
+mtcars %>%
+  select(mpg, wt) %>%
+  pivot_longer(cols=everything())
+```
+
+(Writing `cols=` is optional, but makes things explicit).
+
+#### Exclude some variables (keep them as index columns)
+
+Imagine we have one column which we'd like to keep as an index. We can exclude from pivoting by writing
+a hyphen in front of the variable name:
+
+```{r}
+mtcars %>%
+  select(cyl, mpg, wt) %>%
+  pivot_longer(cols = -cyl) %>%
+  sample_n(6)
+```
+
+If we have two columns to exclude we need to include them as a vector using `c()` (short for concatenate):
+
+```{r}
+mtcars %>%
+  select(cyl, am, mpg, wt) %>%
+  pivot_longer(cols = c(-cyl, -am)) %>%
+  sample_n(6)
+```
+
+You can also do this the other way, by specifying only which columns you do want to pivot:
+
+```{r}
+mtcars %>%
+  select(cyl, am, mpg, wt) %>%
+  pivot_longer(cols = c(mpg, wt)) %>%
+  sample_n(6)
+```
+
+## Reshape to wider form
+
+Use `pivot_wider`. With a simple table like this:
+
+```{r}
+mpg.summary <- mtcars %>%
+  group_by(cyl) %>%
+  summarise(M = mean(mpg))
+mpg.summary
+```
+
+We can spread the data wide to enable comparison (and the table is more in line with expected APA format):
+
+```{r}
+mpg.summary %>%
+  pivot_wider(names_from=cyl, values_from=M)
+```
+
+This is especially useful when you have more rows in the table:
+
+```{r}
+diamonds %>%
+  # this is a quick way of renaming color to be capitalised
+  group_by(cut, Color=color) %>%
+  summarise(M = mean(price)) %>%
+  pivot_wider(names_from=cut, values_from=M)
+```
+
+# Plotting
+
+In stage 1 and 2 students are taught scatter, density and boxplots:
+
+## Scatter plots
+
+```{r}
+iris %>%
+  ggplot(aes(x = Sepal.Length, y=Petal.Length)) +
+  geom_point()
+```
+
+Adding jitter to a plot can be useful. I tend to use `geom_jitter` rather than `geom_point` and
+we find students often benefit from this. Survey data is not often truly continuous, so adding
+jitter helps show points which overlap on scale boundaries:
+
+```{r}
+iris %>%
+  ggplot(aes(x = Sepal.Length, y=Petal.Length)) +
+  geom_jitter()
+```
+
+#### Adding color dimensions {#color-plot}
+
+With a categorical color dimension:
+
+```{r}
+diamonds %>%
+  ggplot(aes(x = carat, y=price, color=clarity)) +
+  geom_point()
+```
+
+Or a continuous color dimension:
+
+```{r}
+iris %>%
+  ggplot(aes(x = Sepal.Length, y=Sepal.Width, color=Petal.Length)) +
+  geom_jitter()
+```
+
+See also [converting continuous and categorical data](#convert-cotin-categ)
+
+### Smoothed lines {#smooth}
+
+We showed how to add a smoothed line:
+
+```{r}
+iris %>%
+  ggplot(aes(x = Sepal.Length, y=Sepal.Width, color=Species)) +
+  geom_jitter() +
+  geom_smooth(se=F)
+```
+
+And to use a linear fit for the lines:
+
+```{r}
+iris %>%
+  ggplot(aes(x = Sepal.Length, y=Sepal.Width, color=Species)) +
+  geom_jitter() +
+  geom_smooth(se=F, method=lm)
+```
+
+## Adding facets/panels {#facets}
+
+A single facet:
+
+```{r}
+diamonds %>%
+  ggplot(aes(x = carat, y=price)) +
+  geom_point() +
+  facet_wrap(~clarity)
+```
+
+A two-way grid of facets
+
+```{r}
+diamonds %>%
+  ggplot(aes(x = carat, y=price)) +
+  # note adding alpha=.1 makes points partly transparent and makes it easier to see
+  # where most of the density is in large datasets. The term alpha refers to the alpha-channel
+  # in computer graphics which controls the transparency of images
+  geom_point(alpha=.1) +
+  facet_grid(cut~clarity)
+```
+
+### Boxplots (and similar x-axis-is-a-category type plots) {#boxplots}
+
+```{r}
+diamonds %>%
+  ggplot(aes(x = cut, y=price)) +
+  geom_boxplot()
+```
+
+Or if you don't like boxplots:
+
+```{r}
+diamonds %>%
+  ggplot(aes(x = cut, y=price)) +
+  # set the error bars to be 95% CI. Default is the SE.
+  # could also use the median_hilow function here
+  stat_summary(fun.data=mean_cl_normal)
+```
+
+Combining boxplots and facets can be useful for experimental data:
+
+```{r}
+warpbreaks %>%
+  ggplot(aes(wool, breaks)) +
+  geom_boxplot() +
+  # note the dot here means 'skip the horizontal-facet`
+  facet_grid(.~tension)
+```
+
+Some people like violin plots + boxplots. Day 9 here is a good example of why:
+
+```{r}
+lme4::sleepstudy %>%
+  ggplot(aes(factor(Days), Reaction)) +
+  geom_violin() +
+  geom_boxplot(width=.2)
+```
+
+## Labelling axes
+
+TODO
+
+- `xlab()`
+- `ylab()`
+- colors
+- labels in facets
+
+# Statistics
+
+Students are taught Bayesian techniques first and supervisors should tend to encourage this too. Start by loading the BayesFactor package:
+
+```{r}
+library(BayesFactor)
+```
+
+## Model 'formula'
+
+Most model functions in R accept a **formula** which describes the outcome and predictor variables (we avoid using dependent and independent variable nomenclature because researchers frequently misuse it when some or all variables are observed rather than manipulated).
+
+Some functions, like t-test, have an alternative method for wide-format data, but this is relatively rare and it is better for students to get used to using model formulae.
+
+---
+
+A formula always has three parts:
+
+```
+y ~ x
+```
+
+1. The 'left hand side', `y`, which is the outcome
+2. The _tilde_ symbol, `~`, which means "is predicted by"
+3. The 'right hand side', `x`, which is the predictor(s)
+
+You can add multiple additive predictors using the `+` symbol:
+
+```
+y ~ x1 + x2 ...
+```
+
+Or add interactions between variables with the `*`:
+
+```
+y ~ x1 * x2 * x3
+```
+
+If you write it this way all 2nd and 3rd-level interactions would be included.
+
+---
+
+Some more complex models require more than one variable on the left hand side, or can combine more than once formula (e.g. for SEM) but we don't teach these on any of the programmes.
+
+## Compare two groups
+
+### Two independent samples:
+
+#### Bayesian
+
+```{r}
+ttestBF(formula= mpg ~ am, data=mtcars)
+```
+
+#### Frequentist
+
+```{r}
+t.test(mpg ~ am, data=mtcars)
+```
+
+### Compare two paired samples
+
+We need to make an example dataset in the right format first (if you know a built in example in R let me know):
+
+```{r}
+paired.data <- lme4::sleepstudy %>%
+  filter(Days==1 | Days==9) %>%
+  mutate(Days=paste0('day', Days)) %>%
+  pivot_wider(names_from=Days, values_from=Reaction)
+
+paired.data
+```
+
+#### Bayesian
+
+```{r}
+with(paired.data, ttestBF(day1, day9, paired=TRUE))
+```
+
+#### Frequentist
+
+```{r}
+with(paired.data, t.test(day1, day9, paired=TRUE))
+```
+
+### More than 2 groups, everything between subjects
+
+Optionallys with interactions too:
+
+#### Bayesian
+
+```{r}
+wool.anova <- anovaBF(breaks ~ wool * tension, data=warpbreaks)
+wool.anova
+```
+
+- We can read lines 1 and 2 of the output as 'main effects'.
+- Line 3 is the combined effect of wool and tension
+
+Line 4 should not be interpreted on it's own. Instead, compare it to line 3:
+
+```{r}
+wool.anova[4]/wool.anova[3]
+```
+
+This is the BF*10* in favour of the interaction.
+
+#### Frequentist
+
+If you don't have interactions it won't matter, but if you have interactions you [probably want to report type 3 sums of squares](https://mcfromnz.wordpress.com/2011/03/02/anova-type-iiiiii-ss-explained/).
+
+```{r}
+car::Anova(lm(breaks ~ wool * tension, data=warpbreaks), type=3)
+```
+
+Note, although most people don't you should probably correct for multiple comparisons after completing 2 way Anova. From Cramer et al, 2016:
+
+> Many psychologists do not realize that exploratory use of the popular multiway analysis of variance harbors a multiple-comparison problem. In the case of two factors, three separate null hypotheses are subject to test (i.e., two main effects and one interaction). Consequently, the probability of at least one Type I error (if all null hypotheses are true) is 14 % rather than 5 %, if the three tests are independent. We explain the multiple-comparison problem and demonstrate that researchers almost never correct for it. To mitigate the problem, we describe four remedies: the omnibus F test, control of the familywise error rate, control of the false discovery rate, and preregistration of the hypotheses.
+
+Cramer, A. O., van Ravenzwaaij, D., Matzke, D., Steingroever, H., Wetzels, R., Grasman, R. P., ... & Wagenmakers, E. J. (2016). Hidden multiplicity in exploratory multiway ANOVA: Prevalence and remedies. Psychonomic bulletin & review, 23(2), 640-647.
+
+[Gelman, Hill and Yajima (2012)](http://www.stat.columbia.edu/~gelman/research/published/multiple2f.pdf) explain why this isn't a problem for the Bayesian approach above.
+
+### Repeated measures Anova
+
+#### Bayesian
+
+The BayesFactor package is fussy about a few things:
+
+- Missing data in the outcome (remove non complete rows with `filter`)
+- Non-factor variables (convert numbers or strings to factors or ordered factors first)
+
+```{r}
+sleep <- lme4::sleepstudy %>%
+  mutate(Days=ordered(Days))
+```
+
+The BF for an effect of `Days` is very large. Also note the ordering of days is being ignored in this model:
+
+```{r}
+anovaBF(Reaction ~ Days + Subject, whichRandom="Subject", data=sleep)
+```
+
+Adding interactions etc. works as for between-subject models shown above. Make sure you test the interaction properly: you probbaaly want to compare it to the next most complicated model, not the null model
+.
+
+#### Frequentist
+
+Useful for calculating effect size measures but less useful for inference:
+
+```{r}
+ez::ezANOVA(sleep, dv = Reaction, wid = Subject, within=Days) %>%
+  pander::pander()
+```
+
+See the `ezANOVA` help file for the horrible details of specifying more complex designs.
+
+## Regression and Ancova
+
+### Ancova: Between subjects factor with continuous covariate
+
+#### Bayesian
+
+This assumes you want to test the effect of a factor conditional on a covariate:
+
+```{r}
+# calculate a base model with the covariate
+h0 <- lmBF(Petal.Length ~ Sepal.Width ,  data=iris)
+# an model of interest with the factor added
+h1 <- lmBF(Petal.Length ~ Sepal.Width * Species,  data=iris)
+```
+
+To get the BF10 for effect of the factor, conditional on the covariate:
+
+```{r}
+h1 / h0
+```
+
+#### Frequentist
+
+```{r}
+iris.ancova <- lm(Petal.Length ~ Sepal.Width * Species,  data=iris)
+car::Anova(iris.ancova)
+```
+
+If you want to see the covariate slopes and simple-effects (i.e. the dummy coded parameters):
+
+```{r}
+iris.ancova %>%
+  broom::tidy() %>%
+  pander::pander(caption="Ancova covariate and dummy coded parameters.")
+```
+
+## Multiple regression
+
+### Multiple predictors and hierarchial steps
+
+#### Bayesian
+
+We need to compare two models to test a single parameter (this is backwards from the usual approach for p values). First calculate a model with and without the parameter you're interested in:
+
+```{r}
+h1 <- lmBF(mpg ~ wt + hp, data=mtcars)
+h0 <- lmBF(mpg ~ wt, data=mtcars)
+```
+
+Then test if it improves the model (it does here):
+
+```{r}
+h1/h0
+```
+
+It's easy to test blocks of predictors this way too — this is hierarchical regression (regression in 'steps' in SPSS):
+
+```{r}
+step1 <- lmBF(rating ~ complaints, data=attitude)
+step2 <- lmBF(rating ~ complaints + learning + raises + critical, data=attitude)
+
+step2 / step1
+```
+
+This shows evidence against the block of three additional predictors added in step 2.
+
+#### Frequentist
+
+```{r}
+mpg.m <- lm(mpg ~ wt + disp, data=mtcars)
+```
+
+Tests of individual parameters:
+
+```{r}
+summary(mpg.m)
+```
+
+Or get test results as a dataframe:
+
+```{r}
+# the `statistic` column is the t statstic here
+broom::tidy(mpg.m)
+```
+
+### Interactions in regression
+
+#### Bayesian
+
+```{r}
+# note + vs * in formula
+h1 <- lmBF(mpg ~ wt * hp, data=mtcars)
+h0 <- lmBF(mpg ~ wt + hp, data=mtcars)
+
+h1/h0
+```
+
+#### Frequentist
+
+```{r}
+# note + vs * in formula
+h1 <- lm(mpg ~ wt * hp, data=mtcars)
+h0 <- lm(mpg ~ wt + hp, data=mtcars)
+
+anova(h1, h0)
+```
+
+Or just:
+
+```{r}
+anova(h1)
+```
+
+### Quadratic/polynomial terms in regression
+
+This looks a bit non-linear:
+
+```{r}
+mtcars %>%
+  ggplot(aes(wt, mpg)) +
+  geom_jitter()
+```
+
+#### Bayesian
+
+```{r}
+# it's annoying but we have to add the column to the df first
+# because lmBF won't allow arithmetic inside it's formula
+
+mtcars.poly <- mtcars %>%
+  mutate(wt_2 = poly(wt,2))
+
+h1 <- lmBF(mpg ~ wt + wt_2, data=mtcars.poly)
+h0 <- lmBF(mpg ~ wt, data=mtcars.poly)
+
+h1/h0
+```
+
+#### Frequentist
+
+```{r}
+h1 <- lm(mpg ~ poly(wt, 2), data=mtcars)
+summary(h1) # look at the p value for the second poly term
+```
+
+## Model statistics
+
+Extract R^2^ and other statistics from any linear model:
+
+```{r}
+iris.ancova %>%
+  broom::glance() %>%
+  pivot_longer(everything())
+```
+
+## Plotting model results
+
+#### Bayesian
+
+You can plot the posterior density of model parameters. It can help to standardise first:
+
+```{r}
+# standardise first
+mtcars.z <- scale(mtcars) %>% as_tibble()
+h1.z <- lmBF(mpg ~ wt + hp, data=mtcars.z)
+```
+
+```{r}
+chains = posterior(h1.z, iterations = 5000, progress = FALSE) %>% as_tibble()
+
+chains %>%
+  pivot_longer(c(wt, hp)) %>%
+  ggplot(aes(value)) +
+  geom_density(aes(y=..scaled..)) +
+  facet_wrap(~name, ncol=1) +
+  geom_vline(xintercept = 0)
+```
+
+Or plot intervals:
+
+```{r}
+chains %>%
+  pivot_longer(c(wt, hp)) %>%
+  ggplot(aes(name, value)) +
+  # 95th highest density posterior interval, see Krushke book but
+  # where these don't cross zero the parameter is 'significant'
+  stat_summary(fun.data=tidybayes::mean_hdci) +
+  coord_flip() +
+  geom_hline(yintercept = 0)
+```
+
+To see more of this kind of exploration/plotting/inference with parameter estimates see also this guide (TODO based on MSc materials).
+
+#### Frequentist
+
+TODO
+
+# Other data handling tasks
+
+## Recoding categorical data
+
+TODO
+
+Taught in stage 2 here: https://benwhalley.github.io/rmip/data.html
+
+## Converting continuous and categorical data {#convert-cotin-categ}
+
+### Chopping up a continuous variable into segments (e.g. for ages)
+
+```{r}
+mtcars %>%
+  select(wt) %>%
+  mutate(wt_categ = cut(wt, 5)) %>%
+  sample_n(10)
+```
+
+Or with pre-set breaks:
+
+```{r}
+mtcars %>%
+  select(wt) %>%
+  mutate(wt_categ = cut(wt, breaks = c(-1,1,3,5,Inf))) %>%
+  sample_n(10)
+```
