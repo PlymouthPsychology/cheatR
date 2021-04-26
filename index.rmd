@@ -1,0 +1,36 @@
+---
+title: 'CheatR: R Cheatsheets for Staff and Students'
+bibliography: [references.bib]
+biblio-style: apa6
+link-citations: yes
+output:
+  webex::html_clean
+---
+
+
+```{r, include=F, echo=F}
+knitr::opts_chunk$set(echo = TRUE,
+  collapse=TRUE,
+  comment=NA,
+  cache = TRUE,
+  message=FALSE)
+```
+
+
+
+
+# Staff
+
+1. [Project supervision](staff-project-students-cheatsheet.html)
+
+
+# Students
+
+Coming soon
+
+
+------------
+
+
+All content on this site distributed under a [Creative Commons](https://creativecommons.org/)
+licence. CC-BY-SA 4.0.
