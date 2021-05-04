@@ -67,6 +67,8 @@ mydata <- read_csv('filename.sav')
 
 ## Download a file from the internet
 
+`#extension`
+
 This downloads supplementary data from a paper in PlosOne (https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0212482#sec016)
 
 ```{r}
@@ -74,6 +76,8 @@ download.file('https://ndownloader.figstatic.com/files/14532419', 'egger.sav')
 ```
 
 ## Read from SPSS
+
+`#extension`
 
 ```{r}
 egger <- haven::read_sav('egger.sav')
@@ -98,6 +102,7 @@ egger.as.factors %>%
 Visually there is not much difference, but the variables of type `<dbl+lbl>` (haven's labelled data type) are now `<fct>` (boring old R factors).
 
 If you have any other trouble with SPSS files, read the Haven documentation. There are some weirdnesses with older SPSS/Sav file formats.
+
 
 ## Fix file path errors
 
@@ -135,7 +140,9 @@ mtcars %>%
   head()
 ```
 
-### Tidying up messy names
+## Tidying messy names
+
+`#extension`
 
 The janitor package has a really great function to tidy messy names as they come from online survey systems. This is a real example:
 
@@ -159,7 +166,10 @@ This makes working with the dataset much easier:
 - No spaces (so no escaping of spaces needed with back ticks)
 - No special characters which can mess things up
 
-### Renaming programatically
+
+## Renaming programatically
+
+`#extension`
 
 You can do similar things yourself by doing string replcements and the `set_names` function.
 
@@ -191,7 +201,7 @@ mtcars %>%
 
 It's also possible to use `pivot_longer` to simplify summarising multiple variables.
 We don't show this technique explicitly, but we do teach `pivot_longer` and `pivot_wider` so
-if the technique was useful then it would be worth teaching:
+students could combine the ideas for themselves:
 
 ```{r}
 mtcars %>%
@@ -203,9 +213,9 @@ mtcars %>%
 
 ### Comparing variables
 
-See [reshaping data](#reshaping) below for a guide to `pivot_longer` and `pivot_wider`.
+`#extension`
 
-Using `pivot_longer` and `pivot_wider` you can compare variables in a table:
+Using `pivot_longer` and `pivot_wider` you can compare variables in a table side by side:
 
 ```{r}
 mtcars %>%
@@ -221,11 +231,14 @@ mtcars %>%
   set_names(str_replace(names(.), "_", " "))
 ```
 
+See [reshaping data](#reshaping) below for a guide to `pivot_longer` and `pivot_wider`.
+
 See also various techniques for [renaming columns](#renaming)
+
 
 # Reshaping data {#reshaping}
 
-We cover reshaping in the [within-subject differences worksheet](https://ajwills72.github.io/rminr/anova1.html), but only in passing.
+We cover reshaping in the [within-subject differences worksheet](https://ajwills72.github.io/rminr/anova1.html), but only briefly.
 For MSC students we cover it here: [TODO ADD LINK]
 
 There are two functions to reshape data:
@@ -233,17 +246,15 @@ There are two functions to reshape data:
 - `pivot_longer`
 - `pivot_wider`
 
-## Reshaping to long form
 
+## Reshaping to long form
 
 ### Select only what you need
 
 It's best to select only the data you need before reshaping. Although not strictly necessary it does:
 
 - make it easier to check the output is as desired
-- avoids an arror where columns are of different types
-
-
+- avoids an error where columns are of different types
 
 
 > **If you try and `pivot_longer` a mix of numeric and character (text) data this will fail***. If you want to keep text columns, exclude from the pivoting (see below for how).
@@ -332,7 +343,8 @@ iris %>%
   geom_point()
 ```
 
-Adding jitter to a plot can be useful.  We don't teach it, but I recommend using `geom_jitter` rather than `geom_point`. This is especially helpful with survey data which is not often truly continuous; adding
+
+`#extension` Adding jitter to a plot can be useful.  We don't teach it, but I recommend using `geom_jitter` rather than `geom_point`. This is especially helpful with survey data which is not often truly continuous; adding
 jitter helps show points which overlap on scale boundaries:
 
 ```{r}
@@ -365,7 +377,7 @@ See also [converting continuous and categorical data](#convert-cotin-categ)
 
 ## Smoothed lines {#smooth}
 
-We showed how to add a smoothed line:
+We show students how to add a smoothed line:
 
 ```{r}
 iris %>%
@@ -374,7 +386,7 @@ iris %>%
   geom_smooth(se=F)
 ```
 
-And to use a linear fit for the lines:
+And also how to use a linear fit for the lines:
 
 ```{r}
 iris %>%
@@ -385,7 +397,7 @@ iris %>%
 
 ## Facets/panels {#facets}
 
-A single facet:
+Create a grid of plots using a single faceting variable:
 
 ```{r}
 diamonds %>%
@@ -394,7 +406,7 @@ diamonds %>%
   facet_wrap(~clarity)
 ```
 
-A two-way grid of facets
+`#extension` Or a two-way grid of facets using two variables:
 
 ```{r}
 diamonds %>%
@@ -441,7 +453,7 @@ diamonds %>%
   geom_boxplot()
 ```
 
-If you don't like boxplots you can use a point-range plot. Bar charts are not recommended because readers perceive points inside the bar, e.g. bottom error bar, as more likely than those outside, e.g. top error bar, even though this is not the case (TODO add citation).
+`#extension` If you don't like boxplots you can use a point-range plot. Bar charts are not recommended because readers perceive points inside the bar, e.g. bottom error bar, as more likely than those outside, e.g. top error bar, even though this is not the case (TODO add citation).
 
 ```{r}
 diamonds %>%
@@ -452,7 +464,7 @@ diamonds %>%
 ```
 
 
-Combining boxplots and facets can be useful for experimental data:
+`#extension` Combining boxplots and facets can be useful for experimental data:
 
 ```{r}
 warpbreaks %>%
@@ -462,7 +474,7 @@ warpbreaks %>%
   facet_grid(.~tension)
 ```
 
-Some people like violin plots + boxplots. Day 9 here is a good example of why:
+`#extension` Some people like violin plots + boxplots. Day 9 in this data is a good example of why:
 
 ```{r}
 lme4::sleepstudy %>%
@@ -472,6 +484,8 @@ lme4::sleepstudy %>%
 ```
 
 ## Labelling axes
+
+`#extension`
 
 - `xlab()` and `ylab()` change x and y axis labels
 - [Color labels can also be changed](https://www.datanovia.com/en/blog/ggplot-legend-title-position-and-labels/)
@@ -566,7 +580,7 @@ with(paired.data, t.test(day1, day9, paired=TRUE))
 
 ### More than 2 groups, everything between subjects
 
-Optionallys with interactions too:
+Optionally with interactions too:
 
 #### Bayesian
 
@@ -627,7 +641,7 @@ Adding interactions etc. works as for between-subject models shown above. Make s
 
 #### Frequentist
 
-Useful for calculating effect size measures but less useful for inference:
+`#extension` This is useful for calculating effect size measures but less useful for inference:
 
 ```{r}
 ez::ezANOVA(sleep, dv = Reaction, wid = Subject, within=Days) %>%
@@ -642,7 +656,7 @@ See the `ezANOVA` help file for the horrible details of specifying more complex 
 
 #### Bayesian
 
-This assumes you want to test the effect of a factor conditional on a covariate:
+This assumes you want to test the effect of a factor (`Species`) conditional on a covariate (`Sepal.Width`):
 
 ```{r}
 # calculate a base model with the covariate
@@ -664,13 +678,14 @@ iris.ancova <- lm(Petal.Length ~ Sepal.Width * Species,  data=iris)
 car::Anova(iris.ancova)
 ```
 
-If you want to see the covariate slopes and simple-effects (i.e. the dummy coded parameters):
+`#extension` If you want to see the covariate slopes and simple-effects (i.e. the dummy coded parameters):
 
 ```{r}
 iris.ancova %>%
   broom::tidy() %>%
   pander::pander(caption="Ancova covariate and dummy coded parameters.")
 ```
+
 
 ## Multiple regression
 
@@ -691,7 +706,7 @@ Then test if it improves the model (it does here) by dividing their Bayes Factor
 h1/h0
 ```
 
-This is an easy to test blocks of predictors too — this is hierarchical regression (regression in 'steps' if you're coming from SPSS):
+`#extension` This is an easy to test blocks of predictors too — this is hierarchical regression (regression in 'steps' if you're coming from SPSS):
 
 ```{r}
 step1 <- lmBF(rating ~ complaints, data=attitude)
@@ -724,7 +739,7 @@ broom::tidy(mpg.m)
 
 
 
-Testing steps:
+`#extension` Testing steps:
 
 ```{r}
 step1 <- lm(rating ~ complaints, data=attitude)
@@ -765,7 +780,7 @@ anova(h1)
 
 ### Quadratic/polynomial terms in regression
 
-This looks a bit non-linear:
+`#extension` This looks a bit non-linear so we might want to test polynomial effects:
 
 ```{r}
 mtcars %>%
@@ -809,7 +824,7 @@ iris.ancova %>%
 
 #### Bayesian
 
-You can plot the posterior density of model parameters. It can help to standardise first:
+`#extension` You can plot the posterior density of model parameters. It can help to standardise first:
 
 ```{r}
 # standardise first
@@ -847,6 +862,7 @@ To see more of this kind of exploration/plotting/inference with parameter estima
 
 TODO
 
+
 # Other data handling tasks
 
 ## Recoding categorical data
@@ -855,9 +871,13 @@ TODO
 
 Taught in stage 2 here: https://benwhalley.github.io/rmip/data.html
 
+
 ## Converting continuous and categorical data {#convert-cotin-categ}
 
+
 ### Chopping up a continuous variable into segments (e.g. for ages)
+
+`#extension`
 
 ```{r}
 mtcars %>%
