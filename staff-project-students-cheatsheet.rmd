@@ -1,11 +1,19 @@
 ---
 title:
   "Everything you needed to know to help your project students
-  but were too busy to find out."
+  but were too busy to find out last year."
 author: Ben Whalley
 output:
   webex::html_clean
 ---
+
+
+<!-- TODO - add these properly to the built html -->
+
+<meta property="og:description" content="Included on this page are short examples of everything we teach students in stage 1 to 4, including the project option workshops, plus some extensions/additions which you may find useful to introduce project students to. Extensions (i.e. parts not taught in the programme) are clearly marked." />
+
+
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -65,7 +73,7 @@ This downloads supplementary data from a paper in PlosOne (https://journals.plos
 download.file('https://ndownloader.figstatic.com/files/14532419', 'egger.sav')
 ```
 
-### Read from SPSS
+## Read from SPSS
 
 ```{r}
 egger <- haven::read_sav('egger.sav')
@@ -91,7 +99,7 @@ Visually there is not much difference, but the variables of type `<dbl+lbl>` (ha
 
 If you have any other trouble with SPSS files, read the Haven documentation. There are some weirdnesses with older SPSS/Sav file formats.
 
-### Fix file path errors
+## Fix file path errors
 
 ```{r, eval=F}
 read_csv('doesntexist.csv')
@@ -217,19 +225,32 @@ See also various techniques for [renaming columns](#renaming)
 
 # Reshaping data {#reshaping}
 
-We cover reshaping in the [Within-subject differences](https://ajwills72.github.io/rminr/anova1.html), but only in passing.
-We also covert this in the MSc workshops (url TBC).
+We cover reshaping in the [within-subject differences worksheet](https://ajwills72.github.io/rminr/anova1.html), but only in passing.
+For MSC students we cover it here: [TODO ADD LINK]
 
 There are two functions to reshape data:
 
 - `pivot_longer`
 - `pivot_wider`
 
-## Reshape to long form
+## Reshaping to long form
 
-It's best to select only the data you need before reshaping; although not strictly necessary, it does avoid some common errors:
 
-#### Simplest case: make everything long
+### Select only what you need
+
+It's best to select only the data you need before reshaping. Although not strictly necessary it does:
+
+- make it easier to check the output is as desired
+- avoids an arror where columns are of different types
+
+
+
+
+> **If you try and `pivot_longer` a mix of numeric and character (text) data this will fail***. If you want to keep text columns, exclude from the pivoting (see below for how).
+
+
+
+### Simplest case: make everything long
 
 ```{r}
 mtcars %>%
@@ -237,9 +258,10 @@ mtcars %>%
   pivot_longer(cols=everything())
 ```
 
-(Writing `cols=` is optional, but makes things explicit).
+In the code above writing `cols=` is optional, but makes things explicit and should be encouraged.
 
-#### Exclude some variables (keep them as index columns)
+
+### Exclude some variables but keep them as index columns
 
 Imagine we have one column which we'd like to keep as an index. We can exclude from pivoting by writing
 a hyphen in front of the variable name:
@@ -251,7 +273,7 @@ mtcars %>%
   sample_n(6)
 ```
 
-If we have two columns to exclude we need to include them as a vector using `c()` (short for concatenate):
+If we have two columns to exclude we need to specify them in a vector using `c()`:
 
 ```{r}
 mtcars %>%
@@ -294,10 +316,11 @@ diamonds %>%
   # this is a quick way of renaming color to be capitalised
   group_by(cut, Color=color) %>%
   summarise(M = mean(price)) %>%
-  pivot_wider(names_from=cut, values_from=M)
+  pivot_wider(names_from=cut, values_from=M) %>% 
+  pander::pander()
 ```
 
-# Plotting
+# Data Visualisation
 
 In stage 1 and 2 students are taught scatter, density and boxplots:
 
@@ -309,17 +332,17 @@ iris %>%
   geom_point()
 ```
 
-Adding jitter to a plot can be useful. I tend to use `geom_jitter` rather than `geom_point` and
-we find students often benefit from this. Survey data is not often truly continuous, so adding
+Adding jitter to a plot can be useful.  We don't teach it, but I recommend using `geom_jitter` rather than `geom_point`. This is especially helpful with survey data which is not often truly continuous; adding
 jitter helps show points which overlap on scale boundaries:
 
 ```{r}
 iris %>%
   ggplot(aes(x = Sepal.Length, y=Petal.Length)) +
-  geom_jitter()
+  geom_jitter() + 
+  ggtitle("Geom jitter reveals overlapping points in non-scale data.")
 ```
 
-#### Adding color dimensions {#color-plot}
+## Color dimensions {#color-plot}
 
 With a categorical color dimension:
 
@@ -339,7 +362,8 @@ iris %>%
 
 See also [converting continuous and categorical data](#convert-cotin-categ)
 
-### Smoothed lines {#smooth}
+
+## Smoothed lines {#smooth}
 
 We showed how to add a smoothed line:
 
@@ -359,7 +383,7 @@ iris %>%
   geom_smooth(se=F, method=lm)
 ```
 
-## Adding facets/panels {#facets}
+## Facets/panels {#facets}
 
 A single facet:
 
@@ -382,15 +406,42 @@ diamonds %>%
   facet_grid(cut~clarity)
 ```
 
-### Boxplots (and similar x-axis-is-a-category type plots) {#boxplots}
+
+### Combining two plots
+
+`#extension`
+
+You can use the `cowplot` package if you want to combine 2 plots and can't use faceting.
+
+
+```{r}
+plot1 <- diamonds %>%
+  ggplot(aes(x = carat, y=price)) +
+  geom_point() +
+  facet_wrap(~clarity)
+
+plot2 <- iris %>%
+  ggplot(aes(x = Sepal.Length, y=Sepal.Width, color=Species)) +
+  geom_jitter() +
+  geom_smooth(se=F, method=lm)
+
+cowplot::plot_grid(plot1, plot2) 
+
+```
+
+
+
+## Boxplots (and similar) {#boxplots}
+
+Where the x axis is a category we teach students to use a boxplot in preference to bar plots:
 
 ```{r}
 diamonds %>%
-  ggplot(aes(x = cut, y=price)) +
+  ggplot(aes(x = cut, y=log(price))) +
   geom_boxplot()
 ```
 
-Or if you don't like boxplots:
+If you don't like boxplots you can use a point-range plot. Bar charts are not recommended because readers perceive points inside the bar, e.g. bottom error bar, as more likely than those outside, e.g. top error bar, even though this is not the case (TODO add citation).
 
 ```{r}
 diamonds %>%
@@ -399,6 +450,7 @@ diamonds %>%
   # could also use the median_hilow function here
   stat_summary(fun.data=mean_cl_normal)
 ```
+
 
 Combining boxplots and facets can be useful for experimental data:
 
@@ -421,12 +473,11 @@ lme4::sleepstudy %>%
 
 ## Labelling axes
 
-TODO
+- `xlab()` and `ylab()` change x and y axis labels
+- [Color labels can also be changed](https://www.datanovia.com/en/blog/ggplot-legend-title-position-and-labels/)
+- [Labels in facets are fiddly but also possible](https://www.datanovia.com/en/blog/how-to-change-ggplot-facet-labels/)
 
-- `xlab()`
-- `ylab()`
-- colors
-- labels in facets
+
 
 # Statistics
 
@@ -627,20 +678,20 @@ iris.ancova %>%
 
 #### Bayesian
 
-We need to compare two models to test a single parameter (this is backwards from the usual approach for p values). First calculate a model with and without the parameter you're interested in:
+We need to compare two models to test a single parameter. First run models *with* and then *without* the parameter you're interested in:
 
 ```{r}
 h1 <- lmBF(mpg ~ wt + hp, data=mtcars)
 h0 <- lmBF(mpg ~ wt, data=mtcars)
 ```
 
-Then test if it improves the model (it does here):
+Then test if it improves the model (it does here) by dividing their Bayes Factors to get the Bayes Factor for the difference in the models:
 
 ```{r}
 h1/h0
 ```
 
-It's easy to test blocks of predictors this way too — this is hierarchical regression (regression in 'steps' in SPSS):
+This is an easy to test blocks of predictors too — this is hierarchical regression (regression in 'steps' if you're coming from SPSS):
 
 ```{r}
 step1 <- lmBF(rating ~ complaints, data=attitude)
@@ -650,6 +701,7 @@ step2 / step1
 ```
 
 This shows evidence against the block of three additional predictors added in step 2.
+
 
 #### Frequentist
 
@@ -669,6 +721,19 @@ Or get test results as a dataframe:
 # the `statistic` column is the t statstic here
 broom::tidy(mpg.m)
 ```
+
+
+
+Testing steps:
+
+```{r}
+step1 <- lm(rating ~ complaints, data=attitude)
+step2 <- lm(rating ~ complaints + learning + raises + critical, data=attitude)
+
+anova(step2, step1)
+```
+
+
 
 ### Interactions in regression
 

@@ -18,7 +18,6 @@ knitr::opts_chunk$set(echo = TRUE,
 
 
 
-
 # Staff
 
 1. [Project supervision](staff-project-students-cheatsheet.html)
