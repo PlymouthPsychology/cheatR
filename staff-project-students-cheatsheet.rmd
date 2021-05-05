@@ -553,9 +553,12 @@ ttestBF(formula= mpg ~ am, data=mtcars)
 t.test(mpg ~ am, data=mtcars)
 ```
 
+
 ### Compare two paired samples
 
-We need to make an example dataset in the right format first (if you know a built in example in R let me know):
+`#extension` Note: students aren't taught paired-samples t-test and are suggested to use a within-Anova with 2 levels of a single factor. This is statistically equivalent and will give you the same answer. [See below for how to do it](#withinanova).
+
+If you really want to do a ttest, we need to make an example dataset in the right format first (if you know a built in example in R let me know):
 
 ```{r}
 paired.data <- lme4::sleepstudy %>%
@@ -616,7 +619,8 @@ Cramer, A. O., van Ravenzwaaij, D., Matzke, D., Steingroever, H., Wetzels, R., G
 
 [Gelman, Hill and Yajima (2012)](http://www.stat.columbia.edu/~gelman/research/published/multiple2f.pdf) explain why this isn't a problem for the Bayesian approach above.
 
-### Repeated measures Anova
+### Repeated measures/Within subjects Anova {#withinanova}
+
 
 #### Bayesian
 
@@ -641,7 +645,10 @@ Adding interactions etc. works as for between-subject models shown above. Make s
 
 #### Frequentist
 
-`#extension` This is useful for calculating effect size measures but less useful for inference:
+For our stage 4 guide to traditional Anova see: https://www.andywills.info/rminr/more-on-anova.html (this page is quite concise already so not repeated here).
+
+
+`#extension` We don't teach this, but this alternative method can be useful for calculating effect size measures:
 
 ```{r}
 ez::ezANOVA(sleep, dv = Reaction, wid = Subject, within=Days) %>%
@@ -878,6 +885,7 @@ Taught in stage 2 here: https://benwhalley.github.io/rmip/data.html
 ### Chopping up a continuous variable into segments (e.g. for ages)
 
 `#extension`
+
 
 ```{r}
 mtcars %>%
