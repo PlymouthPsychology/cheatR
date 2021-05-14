@@ -14,7 +14,6 @@ output:
 
 
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -25,8 +24,9 @@ knitr::opts_chunk$set(echo = TRUE)
 >
 > Included on this page are short examples of everything we teach students in stage 1 to 4, including the project option workshops, plus some extensions/additions which you may find useful to introduce project students to. Extensions (i.e. parts not taught in the programme) are clearly marked.
 
-- TODO add markers for extension content
-- TODO add more links because to stage 1 and 2 materials
+<!-- - TODO add markers for extension content -->
+
+<!-- - TODO add more links because to stage 1 and 2 materials -->
 
 # Before you start
 
@@ -36,30 +36,38 @@ Most of the code here requires loading the tidyverse. If your student has a `cou
 read_csv('x')
 ```
 
-This would produce the error: `Error: 'x' does not exist in current working directory ('/Users/ben/dev/discourse/r-guides').` You need to load tidyverse first:
+You need to load tidyverse first:
 
 ```{r}
 library(tidyverse)
 ```
 
-When reviewing student scripts ensure:
+
+The code above would  also produce the error: `Error: 'x' does not exist in current working directory ('/Users/ben/dev/discourse/r-guides').` Our students often struggle with path-related issues, so make sure they are either:
+
+- Using an [RStududio project](https://ajwills72.github.io/rminr/using-projects.html) and have their data in the same directory as their script, or
+- Use an R Markdown (.Rmd) file, and again have their data in the same directory as their script.
+
+<!-- TODO add link to Rmd resources -->
+
+
+## Code review
+
+When reviewing student's scripts ensure:
 
 - They load `tidyverse` (and BayesFactor) at the top of the file
-- They **don't** load it again further down
+- They **don't** load it again further down (this can cause weirdness)
 - They are including sufficient vertical white space to make the file readable
 - They break up long lines of code (e.g. > 100 characters, and after every pipe `%>%`) with a line break
 
-## Using projects or Rmd files
 
-Using [a project](https://ajwills72.github.io/rminr/using-projects.html) or working in an Rmd (Rmarkdown) file will greatly reduce errors caused by missing files/incorrect paths.
 
-- TODO add link to Rmd guide
 
 # Reading data
 
 ## Read CSV
 
-Read a CSV files stored in the current working directory:
+Read a CSV file stored in the current working directory:
 
 ```{r, eval=F}
 mydata <- read_csv('filename.sav')
@@ -75,33 +83,80 @@ This downloads supplementary data from a paper in PlosOne (https://journals.plos
 download.file('https://ndownloader.figstatic.com/files/14532419', 'egger.sav')
 ```
 
-## Read from SPSS
+## Read all the csv files stored in a directory:
 
-`#extension`
+```{r, eval=F, include=F, echo=F}
+dir.create('multifile-data/')
+tibble(i=1:10) %>% rowwise() %>% do(., {
+  p <-  .$i;
+  tibble(participant=p, rt=rnorm(1000,250,200), condition=sample(1:4, 1000, replace=T)) %>% 
+    write_csv(paste0('multifile-data/participant', p, '.csv'))
+})
+```
+
+If you have a folder full of data files you can list them like so:
 
 ```{r}
-egger <- haven::read_sav('egger.sav')
+list.files('multifile-data/')
+```
+
+
+You can read all the csv files like so:
+
+```{r}
+combined.data <- tibble(file = list.files('multifile-data/')) %>% 
+  rowwise() %>% 
+  do(
+    {
+      fn = .$file;
+      read_csv(paste0("multifile-data/", fn)) %>% 
+        mutate(file = fn)
+    }
+  )
+
+# by-participant summary
+combined.data %>% 
+  group_by(participant) %>% 
+  summarise(mean(rt), sd(rt))
+```
+
+
+
+
+## Read from SPSS, Excel
+
+`#extension` We don't yet teach students this, but the `rio` package has a flexible interface for importing SPSS/SAV files, Excel and many other formats.
+
+```{r}
+egger <- rio::import('egger.sav')
 
 egger %>%
   select(ID:height_cm) %>%
   glimpse
 ```
 
-If reading an existing SPSS file which has factor (category) labels, you may want to run this command which
-properly converts all labelled category data to factors. This avoids some errors when pivoting or mutating:
+Reading of different file type works, based on the file extension:
 
 ```{r}
-egger.as.factors <- egger %>%
-  mutate_if(haven::is.labelled, factor)
+rio::import('sleep.xlsx') %>% 
+  glimpse
+```
 
-egger.as.factors %>%
+
+
+If reading an existing SPSS file which has factor (category) labels that you would like to preserve you can also use the `haven` package.  The code below shows how to converts all labelled category data to factors. This avoids some errors later when pivoting or mutating:
+
+```{r}
+egger.labelled <- haven:::read_sav('egger.sav') %>%
+  mutate_if(haven::is.labelled, factor)
+  
+egger.labelled %>%
   select(ID:height_cm) %>%
   glimpse
 ```
 
 Visually there is not much difference, but the variables of type `<dbl+lbl>` (haven's labelled data type) are now `<fct>` (boring old R factors).
-
-If you have any other trouble with SPSS files, read the Haven documentation. There are some weirdnesses with older SPSS/Sav file formats.
+If you have any other trouble with SPSS labels read the Haven documentation.
 
 
 ## Fix file path errors
@@ -147,16 +202,13 @@ mtcars %>%
 The janitor package has a really great function to tidy messy names as they come from online survey systems. This is a real example:
 
 ```{r}
-dpt_survey <- read_csv('Devon Partnership Trust DPT Patient and Carers Survey Experiences of D.csv') %>%
-  # just show first 20 cols
-  select(1:20) %>%
-  glimpse()
+rio::import('sleep.xlsx') %>% 
+  glimpse
 ```
 
 ```{r}
-dpt_survey %>%
+rio::import('sleep.xlsx') %>% 
   janitor::clean_names() %>%
-  select(1:20) %>%
   glimpse
 ```
 
@@ -171,7 +223,7 @@ This makes working with the dataset much easier:
 
 `#extension`
 
-You can do similar things yourself by doing string replcements and the `set_names` function.
+You can do similar things yourself by doing string replacements and the `set_names` function.
 
 ```{r}
 # here the dot refers to the data coming from the pipe
@@ -187,9 +239,10 @@ dpt_survey %>%
   glimpse
 ```
 
+
 # Tables/descriptive statistics
 
-In stage 1 and 2 students learn how to use `group_by` and `summarise` to make tables of descriptive statistics:
+In stage 1 and 2 students learn how to use `group_by` and `summarise` to make tables of descriptive statistics, and the [better tables](https://www.andywills.info/rminr/better-tables.html) worksheet recommends the same:
 
 ```{r}
 mtcars %>%
@@ -197,10 +250,11 @@ mtcars %>%
   summarise(MPG = mean(mpg), SD=sd(mpg))
 ```
 
+
 ### Summarising multiple variables
 
-It's also possible to use `pivot_longer` to simplify summarising multiple variables.
-We don't show this technique explicitly, but we do teach `pivot_longer` and `pivot_wider` so
+`#extension` It's also possible to use `pivot_longer` to simplify summarising multiple variables.
+We don't show this technique explicitly, but we do teach `pivot_longer` and `pivot_wider`, so
 students could combine the ideas for themselves:
 
 ```{r}
@@ -211,11 +265,10 @@ mtcars %>%
   summarise(M=mean(value), SD=sd(value), Med = median(value), IQR = IQR(value))
 ```
 
-### Comparing variables
 
-`#extension`
+### Comparing variables in tables
 
-Using `pivot_longer` and `pivot_wider` you can compare variables in a table side by side:
+`#extension` Using `pivot_longer` and `pivot_wider` you can compare variables in a table side by side:
 
 ```{r}
 mtcars %>%
@@ -231,9 +284,7 @@ mtcars %>%
   set_names(str_replace(names(.), "_", " "))
 ```
 
-See [reshaping data](#reshaping) below for a guide to `pivot_longer` and `pivot_wider`.
-
-See also various techniques for [renaming columns](#renaming)
+See [reshaping data](#reshaping) below for a guide to `pivot_longer` and `pivot_wider`. See also various techniques for [renaming columns](#renaming).
 
 
 # Reshaping data {#reshaping}
@@ -426,26 +477,25 @@ diamonds %>%
 You can use the `cowplot` package if you want to combine 2 plots and can't use faceting.
 
 
-```{r}
+```{r, fig.width=4, fig.height=2}
 plot1 <- diamonds %>%
   ggplot(aes(x = carat, y=price)) +
-  geom_point() +
+  geom_point(alpha=.1) +
   facet_wrap(~clarity)
 
 plot2 <- iris %>%
   ggplot(aes(x = Sepal.Length, y=Sepal.Width, color=Species)) +
-  geom_jitter() +
+  geom_jitter(alpha=.7) +
   geom_smooth(se=F, method=lm)
 
 cowplot::plot_grid(plot1, plot2) 
-
 ```
 
 
 
 ## Boxplots (and similar) {#boxplots}
 
-Where the x axis is a category we teach students to use a boxplot in preference to bar plots:
+Where the x axis is a categorical variable we teach students to use a boxplot (in preference to bar plots):
 
 ```{r}
 diamonds %>%
@@ -453,7 +503,7 @@ diamonds %>%
   geom_boxplot()
 ```
 
-`#extension` If you don't like boxplots you can use a point-range plot. Bar charts are not recommended because readers perceive points inside the bar, e.g. bottom error bar, as more likely than those outside, e.g. top error bar, even though this is not the case (TODO add citation).
+`#extension` If you don't like boxplots you can use a point-range plot. Bar charts are not recommended because of the ['within-bar bias']( https://doi.org/10.3758/s13423-012-0247-5), whereby readers perceive points inside the bar (e.g. the bottom of an error bar) as more likely than those outside the bar (e.g. the top of an error bar), even though this is not the case.
 
 ```{r}
 diamonds %>%
