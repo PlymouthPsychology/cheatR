@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE,
 
 # Students
 
-Coming soon
+1. [LifesaveR cheatsheet](lifesavr_cheatsheet.html)
 
 
 ------------

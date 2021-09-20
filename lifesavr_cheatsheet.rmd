@@ -1,0 +1,332 @@
+---
+title:
+  "LifesavR Cheatsheet (Introduction to R course) "
+author: Ben Whalley
+output:
+  webex::html_clean
+---
+
+
+<meta property="og:description" content="Included on this page are short examples of everything we teach students in stage 1 to 4, including the project option workshops, plus some extensions/additions which you may find useful to introduce project students to. Extensions (i.e. parts not taught in the programme) are clearly marked." />
+
+
+> This page is intended as a quick reference when helping students with their data handling and analysis.
+>
+> Included on this page are short examples of everything we teach students in the LifeSavR introductory/revision course.
+
+
+
+# Basic R statements
+
+```{r}
+# assign the current year to a variable
+current_year <- 2021
+
+# print the variable we created
+# (it should display below the chunk, or in the console pane)
+current_year
+```
+
+
+```{r}
+# do a calculation to create a new variable from an existing one
+next_year <- current_year + 1
+
+next_year
+```
+
+
+```{r}
+# multiply two numbers
+2 * 221
+```
+
+
+
+# Loading packages
+
+These are the packages used in this cheatsheet (and the lifesavR course:
+
+```{r}
+library(tidyverse)
+library(psydata)
+library(BayesFactor)
+library(corrr)
+```
+
+
+
+# Looking at data
+
+Show only the first 6 rows of the `fuel` data
+
+```{r}
+head(fuel)
+```
+
+
+Shows a list of columns in the `development` dataset plus the first few datapoints (as many as will fit)
+
+```{r}
+glimpse(development)
+```
+
+
+
+# Filtering datasets
+
+The `filter()` function selects rows from a dataset:
+
+```{r, eval=F}
+# filter on a categorical variable
+# == means 'match exactly'
+development %>% 
+  filter(country == "Kenya")
+
+# this doesn't match any rows because the data spells Kenya with a capital 'K'
+development %>% 
+  filter(country == "kenya")
+
+# filtering on a numeric variable
+development %>% filter(year > 2000)
+
+
+# combining multiple filters makes things more specific
+development %>%
+  filter(country == "Kenya") %>%
+  filter(year > 2000)
+
+# assign filtered data to a new variable for re-use later on
+# if you don't store the data, it is displayed but then lost
+development.europe <- development %>% 
+  filter(continent == "Europe") %>% 
+  filter(year > 1980)
+
+# show the stored subset
+development.europe
+
+# make a plot with the subset
+development.europe %>% 
+    ggplot(aes(gdp_per_capita, life_expectancy)) + 
+  geom_point()
+```
+
+
+
+
+# Frequencies
+
+```{r}
+# this gives us the total number of rows
+earnings %>% count()
+
+# numbers of men and women
+earnings %>%
+  count(gender)
+
+# We can do arithmetic on these numbers
+# calculate percentage
+2353 / 4483 * 100
+
+
+# counts for multiple subgroups
+earnings %>%
+  count(job, gender)
+```
+
+```{r}
+# making a frwquency plot
+earnings %>%
+  ggplot(aes(gender)) +
+  stat_count()
+```
+
+
+
+# Summarise
+
+
+```{r, eval=FALSE}
+# use function mean() to summarise mpg column
+# the result is a data.frame with a single column named 'mean_mpg'
+fuel %>%
+  summarise(mean_mpg = mean(mpg))
+
+# if you omit the column name, the summarised column is named after the summary function
+# this produces column names which can be awkward to process later in a pipeline
+# for example:
+fuel %>%
+  summarise(mean(mpg))
+
+# median mpg (rather than mean)
+fuel %>%
+  summarise(median_mpg = median(mpg))
+
+# standard deviation
+fuel %>%
+  summarise(sd_mpg = sd(mpg))
+
+# summarise two columns at once 
+# the mean and sd functions are separated with a comma
+# the resulting data frame is stored in a variable called fuel_summary
+fuel_summary <- fuel %>%
+  summarise(m = mean(mpg), sd = sd(mpg))
+
+# see the stored summary
+fuel_summary
+
+# remember, this summary is still a new dataset; you could do more processing on it in extra steps if needed
+
+# combining filter() and summarise()
+development %>% 
+  filter(continent=="Asia") %>% 
+  summarise(Average_life_expectancy = mean(life_expectancy))
+```
+
+
+
+
+
+
+
+
+# Group by
+
+```{r, eval=F}
+# calculate mean weight loss in each group in a laborious way
+funimagery %>%
+  filter(intervention=="MI") %>%
+  summarise(mean(weight_lost_end_trt))
+
+funimagery %>%
+  filter(intervention=="FIT") %>%
+  summarise(mean(weight_lost_end_trt))
+
+
+# use group_by to split the data and summarise each group
+funimagery %>%
+  group_by(intervention) %>%
+  summarise(mean(weight_lost_end_trt))
+
+```
+
+
+```{r}
+# example of grouping by two columns at once
+funimagery %>%
+  group_by(gender, intervention) %>%
+  summarise(mean(weight_lost_end_trt))
+
+```
+
+
+Calculate the mean and SD in one go
+
+```{r}
+funimagery %>%
+  group_by(intervention) %>%
+  summarise(
+    mean(weight_lost_end_trt),
+    sd(weight_lost_end_trt)
+  )
+
+```
+
+
+
+Give your new summary columns a name (this is good practice)
+
+```{r}
+funimagery %>%
+  group_by(intervention) %>%
+  summarise(
+    mean_weight_lost_end_trt = mean(weight_lost_end_trt),
+    sd_weight_lost_end_trt = sd(weight_lost_end_trt)
+  )
+```
+
+
+# Boxplot
+
+Boxplots show the interquartile range (IQR) as the height of the box.
+
+The IQR is the range which includes 50% of the data points
+
+
+```{r}
+funimagery %>%
+  ggplot(aes(intervention, weight_lost_end_trt)) +
+  geom_boxplot() +
+  scale_y_continuous(n.breaks = 10) + # this extra code just adds more marks on the y-axis
+  labs(x = "Intervention", y="Weight lost (end treatment)")
+```
+
+
+
+# Scatter plot
+
+```{r}
+fuel %>%
+  ggplot(aes(x=weight, y=mpg)) + # selects the columns to use
+    geom_point()                 # adds the points to the plot
+```
+
+
+
+
+
+
+
+# Correlation (and Bayes Factor)
+
+Load the `corrr` package (see above):
+
+```{r}
+# select weight at baseline and follow-up in the funimagery study
+# and correlate them
+funimagery %>%
+  select(kg1, kg2, kg3) %>%
+  correlate()
+```
+
+
+```{r}
+# use `with()` to tell `correlationBF` which dataset to use
+with(funimagery,  correlationBF(kg1, kg3))
+```
+
+Remember to ignore the part which reads `r=0.333`. The large number after that is the Bayes Factor in favour of the correlation.
+
+
+
+
+
+
+
+
+# Loading CSV data
+
+
+Load CSV data from a local file (in the same directory as your `.Rmd` file... remember to upload it to the server):
+
+
+```{r, eval=F}
+shootings <- read_csv("shootings.csv")
+```
+
+
+
+Load CSV data from a URL (over the web):
+
+```{r}
+shootings <- read_csv("https://raw.githubusercontent.com/benwhalley/psydata/main/data-raw/shootings.csv")
+```
+
+
+
+
+
+
+
+
+
