@@ -28,6 +28,11 @@ knitr::opts_chunk$set(echo = TRUE,
 1. [LifesaveR cheatsheet](lifesavr_cheatsheet.html)
 
 
+# Combined
+
+- [Complete cheatsheet](complete-cheat.html) (superset of all code/tips but less explanation than basic student version)
+
+
 ------------
 
 
