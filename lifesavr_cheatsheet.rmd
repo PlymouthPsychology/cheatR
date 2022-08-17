@@ -299,11 +299,6 @@ Remember to ignore the part which reads `r=0.333`. The large number after that i
 
 
 
-
-
-
-
-
 # Loading CSV data
 
 
@@ -325,8 +320,79 @@ shootings <- read_csv("https://raw.githubusercontent.com/benwhalley/psydata/main
 
 
 
+# Regression
 
 
+```{r}
+library(psydata)
+```
+
+Simple linear model (regression) with one predictor:
+
+```{r}
+lm(mpg ~ weight, data=fuel)
+```
+
+Calculate Bayes Factor for single predictor:
+
+```{r}
+library(BayesFactor)
+```
+
+```{r}
+lmBF(mpg ~ weight, data=fuel)
+```
+
+
+
+Multiple regression (use `+` to add predictors:
+
+```{r}
+lm(mpg ~ weight + cyl, data=fuel)
+```
+
+
+Bayes Factor to test addition of a variable to an existing model:
+
+```{r}
+A <- lmBF(mpg ~ weight, data=fuel)
+B <- lmBF(mpg ~ weight + cyl, data=fuel)
+
+# gives evidence _for_ B against A
+B / A
+```
+
+
+
+
+Calculate R^2^:
+
+```{r}
+library(broom)
+lm(mpg ~ weight + cyl, data=fuel) %>%  glance()
+```
+
+Plot histogram of residuals from a regression model:
+
+```{r}
+lm(mpg ~ weight + cyl, data=fuel) %>% 
+  augment() %>% 
+  ggplot(aes(.resid)) + geom_histogram()
+```
+
+
+Fitted-vs-residual diagnostic plot:
+
+```{r}
+lm(mpg ~ weight + cyl, data=fuel) %>% 
+  augment() %>% 
+  ggplot(aes(.fitted, .resid)) + 
+  geom_point() + 
+  geom_smooth(size=.25) + 
+  geom_smooth(method=lm, se=F, size=.25, color="black", linetype="dashed") + 
+  theme_minimal()
+
+```
 
 
 
